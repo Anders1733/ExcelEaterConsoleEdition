@@ -361,3 +361,21 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/PlateForExcelFiles/Competence maps/test1.xlsx
+/PlateForExcelFiles/Competence maps/test2.xlsx
+/PlateForExcelFiles/DirectionsList.xlsx
+/PlateForExcelFiles/SectionsList.xlsx
+/PlateForExcelFiles/SubsectionsList.xlsx
+/PlateForExcelFiles/test.xlsx
+/PlateForExcelFiles/test1.xlsx
+/PlateForExcelFiles/TopicsList.xlsx
+/PlateForExcelFiles/UnitsList.xlsx
+/PlateForExcelFiles/DirectionsList.xlsx
+/PlateForExcelFiles/SectionsList.xlsx
+/PlateForExcelFiles/SubsectionsList.xlsx
+/PlateForExcelFiles/test.xlsx
+/PlateForExcelFiles/test1.xlsx
+/PlateForExcelFiles/TopicsList.xlsx
+/PlateForExcelFiles/UnitsList.xlsx
+/PlateForExcelFiles/Competence maps/test1.xlsx
+/PlateForExcelFiles/Competence maps/test2.xlsx

@@ -17,25 +17,51 @@ namespace ExcelEaterConsoleEdition.Services
                 var existingSectionId = await FindSectionIdByName(row[3].ToString(), dbContext);
                 var existingSubsectionId = await FindSubsectionIdByName(row[4].ToString(), dbContext);
                 var existingTopicId = await FindTopicIdByName(row[5].ToString(), dbContext);
+                var currentLevel = Int32.Parse(row[6].ToString());
+                var desiredLevel = Int32.Parse(row[7].ToString());
 
+                // Проверяем, существует ли уже подобная запись в базе данных
+                var existingCompetency = await dbContext.Competencies.FirstOrDefaultAsync(
+                    c =>
+                        c.EmployeeId == existingEmployeeId &&
+                        c.DirectionId == existingDirectionId &&
+                        c.SectionId == existingSectionId &&
+                        c.SubsectionId == existingSubsectionId &&
+                        c.TopicId == existingTopicId
+                );
 
-                // Если такого раздела нет, добавляем новую запись
-                var newCompetency = new CompetencyEntity
+                if (existingCompetency != null)
                 {
-                    EmployeeId = existingEmployeeId,
-                    DirectionId = existingDirectionId,
-                    SectionId = existingSectionId,
-                    SubsectionId = existingSubsectionId,
-                    TopicId = existingTopicId,
-                    CurrentLevel = Int32.Parse(row[6].ToString()),
-                    DesiredLevel = Int32.Parse(row[7].ToString())
-                };
+                    // Обновляем уровни, если они изменились
+                    if (currentLevel != existingCompetency.CurrentLevel || desiredLevel != existingCompetency.DesiredLevel)
+                    {
+                        existingCompetency.CurrentLevel = currentLevel;
+                        existingCompetency.DesiredLevel = desiredLevel;
 
-                dbContext.Competencies.Add(newCompetency);
-                await dbContext.SaveChangesAsync();
+                        // Сохраняем изменения в базе данных
+                        await dbContext.SaveChangesAsync();
+                    }
+                }
+                else
+                {
+                    // Записи нет, создаем новую
+                    var newCompetency = new CompetencyEntity
+                    {
+                        EmployeeId = existingEmployeeId,
+                        DirectionId = existingDirectionId,
+                        SectionId = existingSectionId,
+                        SubsectionId = existingSubsectionId,
+                        TopicId = existingTopicId,
+                        CurrentLevel = currentLevel,
+                        DesiredLevel = desiredLevel
+                    };
 
+                    dbContext.Competencies.Add(newCompetency);
+                    await dbContext.SaveChangesAsync();
+                }
             }
         }
+
 
         private static async Task<int> FindEmployeeIdByName(string employeeName, string unitName, ApplicationDbContext dbContext)
         {
