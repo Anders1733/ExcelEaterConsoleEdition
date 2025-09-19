@@ -17,9 +17,8 @@ namespace ExcelEaterConsoleEdition.Configurations
         {
             builder.ToTable("Employees").HasKey(e => e.EmployeeId);
 
-            builder.HasOne(e => e.Unit)
-                .WithMany(u => u.Employees)
-                .HasForeignKey(e => e.UnitId);
+            // Связь с UnitEntity
+            builder.HasOne(e => e.Unit).WithMany(u => u.Employees).HasForeignKey(e => e.UnitId);
         }
     }
 }

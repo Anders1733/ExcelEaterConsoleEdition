@@ -16,8 +16,6 @@ namespace ExcelEaterConsoleEdition.Configurations
 
             builder.ToTable("Competencies").HasKey(e => e.CompetencyId);
 
-
-
             // Связь с DirectionEntity
             builder.HasOne(c => c.Direction).WithMany(d => d.Competencies).HasForeignKey(c => c.DirectionId);
 
