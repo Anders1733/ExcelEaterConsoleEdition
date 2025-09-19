@@ -121,6 +121,8 @@ namespace ExcelEaterConsoleEdition.Parser
             using var package = new ExcelPackage(new FileInfo(filePath));
             package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
 
+            Console.WriteLine("FileName = " + package.File.FullName);
+
             var dataRows = new List<List<object>>();
 
             var row = new List<object>();
@@ -146,11 +148,11 @@ namespace ExcelEaterConsoleEdition.Parser
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 headers.Add(col, worksheet.Cells[1, col].Text);
 
-            Console.WriteLine("FileName = " + package.File.FullName);
-            Console.WriteLine("SheetName = " + worksheet.Name);
-            Console.WriteLine("Index = " + worksheet.Index);
-            Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
-            Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
+            
+            //Console.WriteLine("SheetName = " + worksheet.Name);
+            //Console.WriteLine("Index = " + worksheet.Index);
+            //Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
+            //Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
 
             // Создаем временную коллекцию данных
             var dataRows = new List<List<object>>();
@@ -165,7 +167,7 @@ namespace ExcelEaterConsoleEdition.Parser
             int parsedRows = 0;
 
             // Пропускаем первую строку-заголовок
-            for (var row = 2; row <= worksheet.Dimension.End.Row; row++) //вернуть на 2
+            for (var row = 2; row <= worksheet.Dimension.End.Row; row++) 
             {
                 var rowValues = new List<object>();
 
@@ -176,7 +178,7 @@ namespace ExcelEaterConsoleEdition.Parser
 
                 }
 
-                // Проверяем наличие хотя бы одного ненулевого значения среди элементов с индексами 2-6 включительно
+                
                 bool hasValidData = true;
                 for (int idx = 0; idx <= 4; idx++)
                 {
@@ -187,7 +189,7 @@ namespace ExcelEaterConsoleEdition.Parser
                     }
                 }
 
-                // Если нашли хотя бы одно непустое значение, добавляем строку
+                // Плохая реализация. Надо переделать на что-то по-лучше
                 if (hasValidData)
                 {
                     rowValues.InsertRange(0, addData);
