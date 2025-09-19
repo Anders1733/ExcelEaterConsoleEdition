@@ -55,8 +55,7 @@ namespace ExcelEaterConsoleEdition.Parser
             }
         }
 
-
-        public static List<List<object>> ImportSingleSheetToList(string filePath)
+        public static List<List<object>> ImportSingleSheetToList(string filePath, int sheetIndex)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
             using var package = new ExcelPackage(new FileInfo(filePath));
@@ -65,18 +64,18 @@ namespace ExcelEaterConsoleEdition.Parser
             if (package.File.Exists == false)
                 throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
 
-            var worksheet = package.Workbook.Worksheets[1];
+            var worksheet = package.Workbook.Worksheets[sheetIndex];
 
             // Предполагаем, что первые строки являются заголовками
             var headers = new Dictionary<int, string>();
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 headers.Add(col, worksheet.Cells[1, col].Text);
 
-            Console.WriteLine("FileName = " + package.File.FullName);
-            Console.WriteLine("SheetName = " + worksheet.Name);
-            Console.WriteLine("Index = " + worksheet.Index);
-            Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
-            Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
+            //Console.WriteLine("FileName = " + package.File.FullName);
+            //Console.WriteLine("SheetName = " + worksheet.Name);
+            //Console.WriteLine("Index = " + worksheet.Index);
+            //Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
+            //Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
 
             // Создаем временную коллекцию данных
             var dataRows = new List<List<object>>();
@@ -89,24 +88,17 @@ namespace ExcelEaterConsoleEdition.Parser
             {
                 var rowValues = new List<object>();
 
-                foreach (var header in headers.Keys)
+                foreach (var columnNumber in headers.Keys)
                 {
-                    //rowValues.Add(worksheet.Cells[row, header].Value ?? "");
-                    rowValues.Add(worksheet.Cells[row, header].Value);
+                    object cellValue = worksheet.Cells[row, columnNumber].Value;
+
+                    // Проверяем наличие значения ячейки
+                    if (cellValue != null && !string.IsNullOrWhiteSpace(cellValue.ToString()))
+                        rowValues.Add(cellValue);   // Добавляем только непустые ячейки
                 }
 
-                // Проверяем наличие хотя бы одного ненулевого значения среди элементов с индексами 2-6 включительно
-                bool hasValidData = true;
-
-                if (rowValues is null)
-                {
-                    hasValidData = false;
-                    break;
-                }
-
-
-                // Если нашли хотя бы одно непустое значение, добавляем строку
-                if (hasValidData)
+                // Записываем строку, если в ней есть хотя бы одна ячейка с данными
+                if (rowValues.Count > 0)
                 {
                     dataRows.Add(rowValues);
                     parsedRows++;
@@ -116,93 +108,12 @@ namespace ExcelEaterConsoleEdition.Parser
             return dataRows;
         }
 
-        public static List<List<object>> ImportExcelToList(string filePath)
+        public static string GetSheetNameBySheetIndex(string filePath, int sheetIndex)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
-            using var package = new ExcelPackage(new FileInfo(filePath));
-            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
-
-            
-
-            var dataRows = new List<List<object>>();
-
-            var row = new List<object>();
-
-            if (package.File.Exists == false)
-                throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
-            foreach (var sheetIndex in LaunchParameters.LaunchParameters.SheetNumbersToParse)
-            {
-   
-                dataRows.AddRange(ImportSheetToList(filePath, sheetIndex));
-            }
-            return dataRows;
+            var package = new ExcelPackage(new FileInfo(filePath));
+            return package.Workbook.Worksheets[sheetIndex].Name;
         }
-
-        private static List<List<object>> ImportSheetToList(string filePath, int sheetIndex)
-        {
-            ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
-            using var package = new ExcelPackage(new FileInfo(filePath));
-            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
-            var worksheet = package.Workbook.Worksheets[sheetIndex];
-
-            // Предполагаем, что первые строки являются заголовками
-            var headers = new Dictionary<int, string>();
-            for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
-                headers.Add(col, worksheet.Cells[1, col].Text);
-
-            
-            //Console.WriteLine("SheetName = " + worksheet.Name);
-            //Console.WriteLine("Index = " + worksheet.Index);
-            //Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
-            //Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
-
-            // Создаем временную коллекцию данных
-            var dataRows = new List<List<object>>();
-
-            var addData = new List<object>() 
-            { 
-                ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.FULL_NAME_POSITION), 
-                ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.UNIT_POSITION),
-                worksheet.Name
-            };
-
-            int parsedRows = 0;
-
-            // Пропускаем первую строку-заголовок
-            for (var row = 2; row <= worksheet.Dimension.End.Row; row++) 
-            {
-                var rowValues = new List<object>();
-
-                foreach (var header in headers.Keys)
-                {
-                    //rowValues.Add(worksheet.Cells[row, header].Value ?? "");
-                    rowValues.Add(worksheet.Cells[row, header].Value);
-
-                }
-
-                
-                bool hasValidData = true;
-                for (int idx = 0; idx <= 4; idx++)
-                {
-                    if (rowValues[idx] is null)
-                    {
-                        hasValidData = false;
-                        break;
-                    }
-                }
-
-                // Плохая реализация. Надо переделать на что-то по-лучше
-                if (hasValidData)
-                {
-                    rowValues.InsertRange(0, addData);
-                    dataRows.Add(rowValues);
-                    parsedRows++;
-                }
-            }
-            Logger.Info($"Parsed rows: {parsedRows}");
-            return dataRows;
-        }
-
     }
 }
 

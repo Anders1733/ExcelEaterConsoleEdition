@@ -1,5 +1,6 @@
 ﻿using ExcelEaterConsoleEdition.Database;
 using ExcelEaterConsoleEdition.Entities;
+using ExcelEaterConsoleEdition.Parser;
 using Microsoft.EntityFrameworkCore;
 using System;
 
@@ -7,72 +8,84 @@ namespace ExcelEaterConsoleEdition.Services
 {
     public class CompetencyService
     {
-        public static async Task ImportCompetenciesFromExcelToDb(ApplicationDbContext dbContext, List<List<object>> dataRows)
+        public static async Task ImportCompetenciesFromExcelToDb(ApplicationDbContext dbContext, string filePath)
         {
-            // Получаем employeeId заранее, так как оно одинаково для каждой строки
-            var firstRow = dataRows.First(); 
-            var existingEmployeeId = await FindEmployeeIdByName(firstRow[0].ToString(), firstRow[1].ToString(), dbContext);
+
+            var existingEmployeeId = await FindEmployeeIdByName(
+                ExcelHelper.ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.FULL_NAME_POSITION),
+                ExcelHelper.ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.UNIT_POSITION),
+                dbContext);
 
             using (var transaction = await dbContext.Database.BeginTransactionAsync())
             {
-                try
+                foreach (var sheetIndex in LaunchParameters.LaunchParameters.SheetNumbersToParse)
                 {
-                    foreach (var row in dataRows.Skip(1)) // Пропускаем первую строку, используем её только для имени сотрудника
+                    var existingDirectionId = await FindDirectionIdByName(ExcelHelper.GetSheetNameBySheetIndex(filePath, sheetIndex), dbContext);
+                    List<List<object>> dataRows = ExcelHelper.ImportSingleSheetToList(filePath, sheetIndex);
+                    try
                     {
-                        var existingDirectionId = await FindDirectionIdByName(row[2].ToString(), dbContext);
-                        var existingSectionId = await FindSectionIdByName(row[3].ToString(), dbContext);
-                        var existingSubsectionId = await FindSubsectionIdByName(row[4].ToString(), dbContext);
-                        var existingTopicId = await FindTopicIdByName(row[5].ToString(), dbContext);
-                        var currentLevel = int.Parse(row[6].ToString());
-                        var desiredLevel = int.Parse(row[7].ToString());
-
-                        // Проверяем наличие записи в базе данных
-                        var existingCompetency = await dbContext.Competencies.FirstOrDefaultAsync(c =>
-                            c.EmployeeId == existingEmployeeId &&
-                            c.DirectionId == existingDirectionId &&
-                            c.SectionId == existingSectionId &&
-                            c.SubsectionId == existingSubsectionId &&
-                            c.TopicId == existingTopicId);
-
-                        if (existingCompetency != null)
+                        foreach (var row in dataRows) // Пропускаем первую строку, используем её только для имени сотрудника
                         {
-                            // Обновляем уровни, если они изменились
-                            if (currentLevel != existingCompetency.CurrentLevel || desiredLevel != existingCompetency.DesiredLevel)
+
+
+                            // Получаем employeeId заранее, так как оно одинаково для каждой строки
+
+                            //TODO: рассмотреть вариант постраничного парсинга, тем самым уменьшится дублирования данных получаемых из dataRows
+
+                            var existingSectionId = await FindSectionIdByName(row[0].ToString(), dbContext);
+                            var existingSubsectionId = await FindSubsectionIdByName(row[1].ToString(), dbContext);
+                            var existingTopicId = await FindTopicIdByName(row[2].ToString(), dbContext);
+                            var currentLevel = int.Parse(row[3].ToString());
+                            var desiredLevel = int.Parse(row[4].ToString());
+
+                            // Проверяем наличие записи в базе данных
+                            var existingCompetency = await dbContext.Competencies.FirstOrDefaultAsync(c =>
+                                c.EmployeeId == existingEmployeeId &&
+                                c.DirectionId == existingDirectionId &&
+                                c.SectionId == existingSectionId &&
+                                c.SubsectionId == existingSubsectionId &&
+                                c.TopicId == existingTopicId);
+
+                            if (existingCompetency != null)
                             {
-                                existingCompetency.CurrentLevel = currentLevel;
-                                existingCompetency.DesiredLevel = desiredLevel;
+                                // Обновляем уровни, если они изменились
+                                if (currentLevel != existingCompetency.CurrentLevel || desiredLevel != existingCompetency.DesiredLevel)
+                                {
+                                    existingCompetency.CurrentLevel = currentLevel;
+                                    existingCompetency.DesiredLevel = desiredLevel;
+                                }
+                            }
+                            else
+                            {
+                                // Создаем новую запись
+                                var newCompetency = new CompetencyEntity
+                                {
+                                    EmployeeId = existingEmployeeId,
+                                    DirectionId = existingDirectionId,
+                                    SectionId = existingSectionId,
+                                    SubsectionId = existingSubsectionId,
+                                    TopicId = existingTopicId,
+                                    CurrentLevel = currentLevel,
+                                    DesiredLevel = desiredLevel
+                                };
+
+                                dbContext.Competencies.Add(newCompetency);
                             }
                         }
-                        else
-                        {
-                            // Создаем новую запись
-                            var newCompetency = new CompetencyEntity
-                            {
-                                EmployeeId = existingEmployeeId,
-                                DirectionId = existingDirectionId,
-                                SectionId = existingSectionId,
-                                SubsectionId = existingSubsectionId,
-                                TopicId = existingTopicId,
-                                CurrentLevel = currentLevel,
-                                DesiredLevel = desiredLevel
-                            };
 
-                            dbContext.Competencies.Add(newCompetency);
-                        }
+                        
                     }
-
-                    // Применяем все изменения одним вызовом
-                    await dbContext.SaveChangesAsync();
-                    await transaction.CommitAsync();
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        throw ex;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    throw ex; 
-                }
+                // Применяем все изменения одним вызовом
+                await dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
         }
-
 
 
 

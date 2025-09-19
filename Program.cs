@@ -59,8 +59,8 @@ class Program
                 stopwatch.Reset();
                 stopwatch.Start();
                 Logger.Info($"Начало обработки файла = {file}");
-                var parsedExcel = ExcelHelper.ImportExcelToList(file);
-                await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, parsedExcel);
+                //var parsedExcel = ExcelHelper.ImportExcelToList(file);
+                await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, file);
                 stopwatch.Stop();
                 Logger.Info($"Конец обработки файла = {file}");
                 TimeSpan elapsedTime = stopwatch.Elapsed;
