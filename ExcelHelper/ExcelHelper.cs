@@ -55,23 +55,24 @@ namespace ExcelEaterConsoleEdition.Parser
         }
 
 
-        public static List<List<object>> ImportSheetToList(string filePath, int sheetIndex)
+        public static List<List<object>> ImportSingleSheetToList(string filePath)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
             using var package = new ExcelPackage(new FileInfo(filePath));
-            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
+            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
 
             if (package.File.Exists == false)
                 throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
 
-            var worksheet = package.Workbook.Worksheets[sheetIndex];
+            var worksheet = package.Workbook.Worksheets[1];
 
             // Предполагаем, что первые строки являются заголовками
             var headers = new Dictionary<int, string>();
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 headers.Add(col, worksheet.Cells[1, col].Text);
 
-            Console.WriteLine("Name = " + worksheet.Name);
+            Console.WriteLine("FileName = " + package.File.FullName);
+            Console.WriteLine("SheetName = " + worksheet.Name);
             Console.WriteLine("Index = " + worksheet.Index);
             Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
             Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
@@ -91,7 +92,6 @@ namespace ExcelEaterConsoleEdition.Parser
                 {
                     //rowValues.Add(worksheet.Cells[row, header].Value ?? "");
                     rowValues.Add(worksheet.Cells[row, header].Value);
-
                 }
 
                 // Проверяем наличие хотя бы одного ненулевого значения среди элементов с индексами 2-6 включительно
@@ -115,7 +115,26 @@ namespace ExcelEaterConsoleEdition.Parser
             return dataRows;
         }
 
-        public static List<List<object>> ImportSheetToDatabase(string filePath, int sheetIndex)
+        public static List<List<object>> ImportExcelToList(string filePath)
+        {
+            ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
+            using var package = new ExcelPackage(new FileInfo(filePath));
+            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
+
+            var dataRows = new List<List<object>>();
+
+            var row = new List<object>();
+
+            if (package.File.Exists == false)
+                throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
+            foreach (var sheetIndex in LaunchParameters.LaunchParameters.SheetNumbersToParse)
+            {
+   
+                dataRows.AddRange(ImportSheetToList(filePath, sheetIndex));
+            }
+            return dataRows;
+        }
+        private static List<List<object>> ImportSheetToList(string filePath, int sheetIndex)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
             using var package = new ExcelPackage(new FileInfo(filePath));
@@ -127,7 +146,8 @@ namespace ExcelEaterConsoleEdition.Parser
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 headers.Add(col, worksheet.Cells[1, col].Text);
 
-            Console.WriteLine("Name = " + worksheet.Name);
+            Console.WriteLine("FileName = " + package.File.FullName);
+            Console.WriteLine("SheetName = " + worksheet.Name);
             Console.WriteLine("Index = " + worksheet.Index);
             Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
             Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
@@ -135,7 +155,12 @@ namespace ExcelEaterConsoleEdition.Parser
             // Создаем временную коллекцию данных
             var dataRows = new List<List<object>>();
 
-            var addData = new List<object>() { ReadCellValue(filePath, 1, LaunchParameters.LaunchParameters.FULL_NAME_POSITION), worksheet.Index };
+            var addData = new List<object>() 
+            { 
+                ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.FULL_NAME_POSITION), 
+                ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.UNIT_POSITION),
+                worksheet.Name
+            };
 
             int parsedRows = 0;
 
@@ -173,6 +198,7 @@ namespace ExcelEaterConsoleEdition.Parser
             Console.WriteLine("Parsed rows:" + parsedRows);
             return dataRows;
         }
+
     }
 }
 

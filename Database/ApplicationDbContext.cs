@@ -22,6 +22,9 @@ namespace ExcelEaterConsoleEdition.Database
         public DbSet<SubsectionEntity> Subsections { get; set; }
         public DbSet<TopicEntity> Topics { get; set; }
         public DbSet<UnitEntity> Units { get; set; }
+        public DbSet<EmployeeEntity> Employees { get; set; }
+        public DbSet<DirectionEntity> Directions { get; set; }
+        public DbSet<CompetencyEntity> Competencies { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

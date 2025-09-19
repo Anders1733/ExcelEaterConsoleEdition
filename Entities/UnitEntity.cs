@@ -10,5 +10,7 @@ namespace ExcelEaterConsoleEdition.Entities
     {
         public int UnitId { get; set; }
         public string Name { get; set; }
+
+        public virtual ICollection<EmployeeEntity> Employees { get; set; }
     }
 }

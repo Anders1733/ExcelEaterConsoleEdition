@@ -4,30 +4,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ExcelEaterConsoleEdition.Services
 {
-    public class SectionService
+    public class DirectionService
     {
-        public static async Task ImportSectionsFromExcelToDb(ApplicationDbContext dbContext, List<List<object>> sectionNames)
+        public static async Task ImportDirectionsFromExcelToDb(ApplicationDbContext dbContext, List<List<object>> directionNames)
         {
             // Перебираем строки Excel-данных (предполагая, что первый элемент в каждом списке - это название раздела)
-            foreach (var row in sectionNames)
+            foreach (var row in directionNames)
             {
                 // Получаем название раздела из первой ячейки строки
-                var sectionName = row.Count > 0 ? row[0]?.ToString().Trim() : null;
+                var directionName = row.Count > 0 ? row[0]?.ToString().Trim() : null;
 
-                if (!string.IsNullOrWhiteSpace(sectionName)) // проверяем, что название не пустое
+                if (!string.IsNullOrWhiteSpace(directionName)) // проверяем, что название не пустое
                 {
                     // Проверяем, существует ли уже такой раздел в базе данных
-                    var existingSection = await dbContext.Sections.FirstOrDefaultAsync(s => s.Name == sectionName);
+                    var existingDirection = await dbContext.Directions.FirstOrDefaultAsync(s => s.Name == directionName);
 
-                    if (existingSection == null)
+                    if (existingDirection == null)
                     {
                         // Если такого раздела нет, добавляем новую запись
-                        var newSection = new SectionEntity
+                        var newDirection = new DirectionEntity
                         {
-                            Name = sectionName
+                            Name = directionName
                         };
 
-                        dbContext.Sections.Add(newSection);
+                        dbContext.Directions.Add(newDirection);
                         await dbContext.SaveChangesAsync();
                     }
                 }

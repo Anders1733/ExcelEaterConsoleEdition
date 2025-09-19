@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace ExcelEaterConsoleEdition.Entities
 {
-    public class SubsectionEntity
+    public class DirectionEntity
     {
-        public int SubsectionId { get; set; }
+        public int DirectionId { get; set; }
         public string Name { get; set; }
 
         public virtual ICollection<CompetencyEntity> Competencies { get; set; }
