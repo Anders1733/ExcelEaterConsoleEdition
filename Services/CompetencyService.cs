@@ -11,7 +11,6 @@ namespace ExcelEaterConsoleEdition.Services
         {
             foreach (var row in dataRows)
             {
-
                 var existingEmployeeId = await FindEmployeeIdByName(row[0].ToString(), row[1].ToString(), dbContext);
                 var existingDirectionId = await FindDirectionIdByName(row[2].ToString(), dbContext);
                 var existingSectionId = await FindSectionIdByName(row[3].ToString(), dbContext);
