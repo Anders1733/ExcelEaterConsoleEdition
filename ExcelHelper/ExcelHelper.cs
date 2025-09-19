@@ -11,7 +11,8 @@ namespace ExcelEaterConsoleEdition.Parser
 {
     public class ExcelHelper
     {
-        ExcelHelper() {
+        ExcelHelper()
+        {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
         }
 
@@ -26,13 +27,13 @@ namespace ExcelEaterConsoleEdition.Parser
             var R1C1CellAdress = ExcelCellBase.TranslateToR1C1(cellAdress, 0, 0);
 
 
-            
+
             Regex regex = new Regex(@"R(\[-?\d+\])C(\[-?\d+\])|R(\[-?\d+\])C|RC(\[-?\d+\])");
 
             Match match = regex.Match(R1C1CellAdress);
 
-            rowNumber = int.Parse(match.Groups[1].Value.Replace("[", "").Replace("]", "")); 
-            columnNumber = int.Parse(match.Groups[2].Value.Replace("[", "").Replace("]", "")); 
+            rowNumber = int.Parse(match.Groups[1].Value.Replace("[", "").Replace("]", ""));
+            columnNumber = int.Parse(match.Groups[2].Value.Replace("[", "").Replace("]", ""));
             using var package = new ExcelPackage(new FileInfo(filePath));
 
             package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
@@ -53,6 +54,66 @@ namespace ExcelEaterConsoleEdition.Parser
             }
         }
 
+
+        public static List<List<object>> ImportSheetToList(string filePath, int sheetIndex)
+        {
+            ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
+            using var package = new ExcelPackage(new FileInfo(filePath));
+            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
+
+            if (package.File.Exists == false)
+                throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
+
+            var worksheet = package.Workbook.Worksheets[sheetIndex];
+
+            // Предполагаем, что первые строки являются заголовками
+            var headers = new Dictionary<int, string>();
+            for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
+                headers.Add(col, worksheet.Cells[1, col].Text);
+
+            Console.WriteLine("Name = " + worksheet.Name);
+            Console.WriteLine("Index = " + worksheet.Index);
+            Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
+            Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
+
+            // Создаем временную коллекцию данных
+            var dataRows = new List<List<object>>();
+
+
+            int parsedRows = 0;
+
+            // Пропускаем первую строку-заголовок
+            for (var row = 2; row <= worksheet.Dimension.End.Row; row++)
+            {
+                var rowValues = new List<object>();
+
+                foreach (var header in headers.Keys)
+                {
+                    //rowValues.Add(worksheet.Cells[row, header].Value ?? "");
+                    rowValues.Add(worksheet.Cells[row, header].Value);
+
+                }
+
+                // Проверяем наличие хотя бы одного ненулевого значения среди элементов с индексами 2-6 включительно
+                bool hasValidData = true;
+
+                if (rowValues is null)
+                {
+                    hasValidData = false;
+                    break;
+                }
+
+
+                // Если нашли хотя бы одно непустое значение, добавляем строку
+                if (hasValidData)
+                {
+                    dataRows.Add(rowValues);
+                    parsedRows++;
+                }
+            }
+            Console.WriteLine("Parsed rows:" + parsedRows);
+            return dataRows;
+        }
 
         public static List<List<object>> ImportSheetToDatabase(string filePath, int sheetIndex)
         {
@@ -76,6 +137,8 @@ namespace ExcelEaterConsoleEdition.Parser
 
             var addData = new List<object>() { ReadCellValue(filePath, 1, LaunchParameters.LaunchParameters.FULL_NAME_POSITION), worksheet.Index };
 
+            int parsedRows = 0;
+
             // Пропускаем первую строку-заголовок
             for (var row = 2; row <= worksheet.Dimension.End.Row; row++) //вернуть на 2
             {
@@ -85,7 +148,7 @@ namespace ExcelEaterConsoleEdition.Parser
                 {
                     //rowValues.Add(worksheet.Cells[row, header].Value ?? "");
                     rowValues.Add(worksheet.Cells[row, header].Value);
-                    
+
                 }
 
                 // Проверяем наличие хотя бы одного ненулевого значения среди элементов с индексами 2-6 включительно
@@ -104,8 +167,10 @@ namespace ExcelEaterConsoleEdition.Parser
                 {
                     rowValues.InsertRange(0, addData);
                     dataRows.Add(rowValues);
+                    parsedRows++;
                 }
             }
+            Console.WriteLine("Parsed rows:" + parsedRows);
             return dataRows;
         }
     }
