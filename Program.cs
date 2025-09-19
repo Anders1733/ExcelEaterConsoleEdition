@@ -6,6 +6,7 @@ using ExcelEaterConsoleEdition.Utilities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Diagnostics;
 
 
 
@@ -15,6 +16,13 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        Logger.IsLoggingEnabled = true;
+        Logger.IsPerformanceLoggingEnabled = true;
+
+        Logger.Info("Начало работы программы.");
+
+        
+
         using var dbContext = new ApplicationDbContext();
 
         await dbContext.Database.EnsureCreatedAsync();
@@ -39,13 +47,24 @@ class Program
 
         string directoryPath = LaunchParameters.COMPETENCE_MAPS_DIRECTORY_PATH;
 
+        //замер производительности
+        var stopwatch = new Stopwatch();
+
+
+
         try
         {
             foreach (var file in Directory.GetFiles(directoryPath))
             {
+                stopwatch.Reset();
+                stopwatch.Start();
+                Logger.Info($"Начало обработки файла = {file}");
                 var parsedExcel = ExcelHelper.ImportExcelToList(file);
                 await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, parsedExcel);
-                ForDebugging.PrintDataRows(parsedExcel);
+                stopwatch.Stop();
+                Logger.Info($"Конец обработки файла = {file}");
+                TimeSpan elapsedTime = stopwatch.Elapsed;
+                Logger.Performance($"Время выполнения: {elapsedTime.TotalMilliseconds} мс");
             }
 
             Console.WriteLine("Обработка завершена.");
@@ -54,7 +73,7 @@ class Program
         {
             Console.WriteLine($"Возникла ошибка: {ex.Message}");
         }
-
+        Logger.Info("Завершение работы программы.");
         //await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, parsedExcel);
 
         //var cellValue = ExcelHelper.ReadCellValue(LaunchParameters.FILE_PATH, LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.FULL_NAME_POSITION);
@@ -69,5 +88,5 @@ class Program
         //    ForDebugging.PrintDataRows(parsedSheet);
         //}
 
-     }
+    }
 }
