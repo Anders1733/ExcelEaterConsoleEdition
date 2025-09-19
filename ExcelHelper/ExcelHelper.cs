@@ -113,9 +113,6 @@ namespace ExcelEaterConsoleEdition.Parser
                 }
             }
 
-            
-
-            
             return dataRows;
         }
 
