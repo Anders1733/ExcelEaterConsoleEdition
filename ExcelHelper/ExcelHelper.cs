@@ -1,9 +1,11 @@
-﻿using System;
+﻿using OfficeOpenXml;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using OfficeOpenXml.Utils;
 using System.Threading.Tasks;
-using OfficeOpenXml;
 
 namespace ExcelEaterConsoleEdition.Parser
 {
@@ -13,10 +15,26 @@ namespace ExcelEaterConsoleEdition.Parser
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
         }
 
-        public static string ReadCellValue(string filePath, int sheetIndex, int rowNumber, int columnNumber)
+        public static string ReadCellValue(string filePath, int sheetIndex, string cellAdress)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
+
+
+            var rowNumber = 0;
+
+            var columnNumber = 0;
+            var R1C1CellAdress = ExcelCellBase.TranslateToR1C1(cellAdress, 0, 0);
+
+
+            
+            Regex regex = new Regex(@"R(\[-?\d+\])C(\[-?\d+\])|R(\[-?\d+\])C|RC(\[-?\d+\])");
+
+            Match match = regex.Match(R1C1CellAdress);
+
+            rowNumber = int.Parse(match.Groups[1].Value.Replace("[", "").Replace("]", "")); 
+            columnNumber = int.Parse(match.Groups[2].Value.Replace("[", "").Replace("]", "")); 
             using var package = new ExcelPackage(new FileInfo(filePath));
+
             package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
 
             if (package.File.Exists == false)
@@ -56,7 +74,7 @@ namespace ExcelEaterConsoleEdition.Parser
             // Создаем временную коллекцию данных
             var dataRows = new List<List<object>>();
 
-            var addData = new List<object>() { ReadCellValue(filePath, 1, 9, 2), worksheet.Index };
+            var addData = new List<object>() { ReadCellValue(filePath, 1, LaunchParameters.LaunchParameters.FULL_NAME_POSITION), worksheet.Index };
 
             // Пропускаем первую строку-заголовок
             for (var row = 2; row <= worksheet.Dimension.End.Row; row++) //вернуть на 2
