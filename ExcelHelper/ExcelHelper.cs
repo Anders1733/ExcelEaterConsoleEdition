@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using OfficeOpenXml.Utils;
 using System.Threading.Tasks;
+using ExcelEaterConsoleEdition.Utilities;
 
 namespace ExcelEaterConsoleEdition.Parser
 {
@@ -111,7 +112,10 @@ namespace ExcelEaterConsoleEdition.Parser
                     parsedRows++;
                 }
             }
-            Console.WriteLine("Parsed rows:" + parsedRows);
+
+            
+
+            
             return dataRows;
         }
 
@@ -121,7 +125,7 @@ namespace ExcelEaterConsoleEdition.Parser
             using var package = new ExcelPackage(new FileInfo(filePath));
             package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
 
-            Console.WriteLine("FileName = " + package.File.FullName);
+            
 
             var dataRows = new List<List<object>>();
 
@@ -136,6 +140,7 @@ namespace ExcelEaterConsoleEdition.Parser
             }
             return dataRows;
         }
+
         private static List<List<object>> ImportSheetToList(string filePath, int sheetIndex)
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
@@ -197,7 +202,7 @@ namespace ExcelEaterConsoleEdition.Parser
                     parsedRows++;
                 }
             }
-            Console.WriteLine("Parsed rows:" + parsedRows);
+            Logger.Info($"Parsed rows: {parsedRows}");
             return dataRows;
         }
 
