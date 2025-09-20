@@ -19,6 +19,8 @@ class Program
         Logger.IsLoggingEnabled = true;
         Logger.IsPerformanceLoggingEnabled = true;
 
+        var programStopwatch = new Stopwatch();
+        programStopwatch.Start();
         Logger.Info("Начало работы программы.");
 
         
@@ -26,21 +28,6 @@ class Program
         using var dbContext = new ApplicationDbContext();
 
         await dbContext.Database.EnsureCreatedAsync();
-
-        //List<List<object>> sectionsList = ExcelHelper.ImportSheetToList(LaunchParameters.SECTIONS_LIST_FILE_PATH, 1);
-        //await SectionService.ImportSectionsFromExcelToDb(dbContext, sectionsList);
-
-        //List<List<object>> subsectionsList = ExcelHelper.ImportSheetToList(LaunchParameters.SUBSECTIONS_LIST_FILE_PATH, 1);
-        //await SubsectionService.ImportSubsectionsFromExcelToDb(dbContext, subsectionsList);
-
-        //List<List<object>> topicsList = ExcelHelper.ImportSheetToList(LaunchParameters.TOPICS_LIST_FILE_PATH, 1);
-        //await TopicService.ImportTopicsFromExcelToDb(dbContext, topicsList);
-
-        //List<List<object>> unitsList = ExcelHelper.ImportSheetToList(LaunchParameters.UNITS_LIST_FILE_PATH, 1);
-        //await UnitService.ImportUnitsFromExcelToDb(dbContext, unitsList);
-
-        //List<List<object>> directionsList = ExcelHelper.ImportSheetToList(LaunchParameters.DIRECTIONS_LIST_FILE_PATH, 1);
-        //await DirectionService.ImportDirectionsFromExcelToDb(dbContext, directionsList);
 
         
         
@@ -73,7 +60,12 @@ class Program
         {
             Console.WriteLine($"Возникла ошибка: {ex.Message}");
         }
+
+        programStopwatch.Stop();
         Logger.Info("Завершение работы программы.");
+        
+        TimeSpan programElapsedTime = programStopwatch.Elapsed;
+        Logger.Performance($"Время выполнения программы: {programElapsedTime.TotalMilliseconds} мс");
         //await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, parsedExcel);
 
         //var cellValue = ExcelHelper.ReadCellValue(LaunchParameters.FILE_PATH, LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.FULL_NAME_POSITION);

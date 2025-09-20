@@ -1,15 +1,43 @@
 ﻿using ExcelEaterConsoleEdition.Database;
 using ExcelEaterConsoleEdition.Entities;
 using ExcelEaterConsoleEdition.Parser;
+using ExcelEaterConsoleEdition.Utilities;
 using Microsoft.EntityFrameworkCore;
-using System;
+using System.Diagnostics;
+using static System.Collections.Specialized.BitVector32;
+
 
 namespace ExcelEaterConsoleEdition.Services
 {
     public class CompetencyService
     {
+
         public static async Task ImportCompetenciesFromExcelToDb(ApplicationDbContext dbContext, string filePath)
         {
+            Dictionary<string, EmployeeEntity> employees = new(); // Сотрудники
+            Dictionary<string, DirectionEntity> directions = new(); // Направления
+            Dictionary<string, SectionEntity> sections = new(); // Секции
+            Dictionary<string, SubsectionEntity> subsections = new(); // Подразделы
+            Dictionary<string, TopicEntity> topics = new(); // Темы
+
+            // Сначала проверяем базу данных на наличие записей
+            bool hasEmployees = await dbContext.Employees.AnyAsync();
+            bool hasDirections = await dbContext.Directions.AnyAsync();
+            bool hasSections = await dbContext.Sections.AnyAsync();
+            bool hasSubsections = await dbContext.Subsections.AnyAsync();
+            bool hasTopics = await dbContext.Topics.AnyAsync();
+
+            // Заполняем словари только если соответствующие таблицы содержат данные
+            if (hasEmployees)
+                employees = await dbContext.Employees.ToDictionaryAsync(e => e.Name);
+            if (hasDirections)
+                directions = await dbContext.Directions.ToDictionaryAsync(d => d.Name);
+            if (hasSections)
+                sections = await dbContext.Sections.ToDictionaryAsync(s => s.Name);
+            if (hasSubsections)
+                subsections = await dbContext.Subsections.ToDictionaryAsync(ss => ss.Name);
+            if (hasTopics)
+                topics = await dbContext.Topics.ToDictionaryAsync(t => t.Name);
 
             var existingEmployeeId = await FindEmployeeIdByName(
                 ExcelHelper.ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.FULL_NAME_POSITION),
@@ -20,23 +48,22 @@ namespace ExcelEaterConsoleEdition.Services
             {
                 foreach (var sheetIndex in LaunchParameters.LaunchParameters.SheetNumbersToParse)
                 {
-                    var existingDirectionId = await FindDirectionIdByName(ExcelHelper.GetSheetNameBySheetIndex(filePath, sheetIndex), dbContext);
+                    var existingDirectionId = await FindDirectionIdByName(ExcelHelper.GetSheetNameBySheetIndex(filePath, sheetIndex), dbContext, directions);
                     List<List<object>> dataRows = ExcelHelper.ImportSingleSheetToList(filePath, sheetIndex);
                     try
                     {
-                        foreach (var row in dataRows) // Пропускаем первую строку, используем её только для имени сотрудника
+                        foreach (var row in dataRows)
                         {
-
-
-                            // Получаем employeeId заранее, так как оно одинаково для каждой строки
-
-                            //TODO: рассмотреть вариант постраничного парсинга, тем самым уменьшится дублирования данных получаемых из dataRows
-
-                            var existingSectionId = await FindSectionIdByName(row[0].ToString(), dbContext);
-                            var existingSubsectionId = await FindSubsectionIdByName(row[1].ToString(), dbContext);
-                            var existingTopicId = await FindTopicIdByName(row[2].ToString(), dbContext);
+                            var sectionName = row[0].ToString();
+                            var subsectionName = row[1].ToString();
+                            var topicName = row[2].ToString();
                             var currentLevel = int.Parse(row[3].ToString());
                             var desiredLevel = int.Parse(row[4].ToString());
+
+                            // Получение ID секций, подразделов и тем из словаря или из базы данных
+                            var existingSectionId = await FindSectionIdByName(sectionName, dbContext, sections);
+                            var existingSubsectionId = await FindSubsectionIdByName(subsectionName, dbContext, subsections);
+                            var existingTopicId = await FindTopicIdByName(topicName, dbContext, topics);
 
                             // Проверяем наличие записи в базе данных
                             var existingCompetency = await dbContext.Competencies.FirstOrDefaultAsync(c =>
@@ -46,48 +73,53 @@ namespace ExcelEaterConsoleEdition.Services
                                 c.SubsectionId == existingSubsectionId &&
                                 c.TopicId == existingTopicId);
 
-                            if (existingCompetency != null)
-                            {
-                                // Обновляем уровни, если они изменились
-                                if (currentLevel != existingCompetency.CurrentLevel || desiredLevel != existingCompetency.DesiredLevel)
-                                {
-                                    existingCompetency.CurrentLevel = currentLevel;
-                                    existingCompetency.DesiredLevel = desiredLevel;
-                                }
-                            }
-                            else
-                            {
-                                // Создаем новую запись
-                                var newCompetency = new CompetencyEntity
-                                {
-                                    EmployeeId = existingEmployeeId,
-                                    DirectionId = existingDirectionId,
-                                    SectionId = existingSectionId,
-                                    SubsectionId = existingSubsectionId,
-                                    TopicId = existingTopicId,
-                                    CurrentLevel = currentLevel,
-                                    DesiredLevel = desiredLevel
-                                };
-
-                                dbContext.Competencies.Add(newCompetency);
-                            }
+                            UpdateOrCreateCompetency(existingCompetency, dbContext, existingEmployeeId, existingDirectionId, existingSectionId, existingSubsectionId, existingTopicId, currentLevel, desiredLevel);
+                            
                         }
-
-                        
                     }
-                    catch (Exception ex)
+                    catch (DbUpdateException ex)
                     {
-                        await transaction.RollbackAsync();
-                        throw ex;
+                        Console.WriteLine("Ошибка при сохранении изменений: ");
+                        Console.WriteLine(ex.InnerException.Message); // Сообщение внутренней ошибки
+                        Console.WriteLine(ex.StackTrace); // Трассировка стека
+                        throw;
                     }
                 }
-                // Применяем все изменения одним вызовом
                 await dbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
         }
 
-
+        private static void UpdateOrCreateCompetency(
+            CompetencyEntity competency,
+            ApplicationDbContext dbContext,
+            int employeeId,
+            int directionId,
+            int sectionId,
+            int subsectionId,
+            int topicId,
+            int currentLevel,
+            int desiredLevel)
+        {
+            if (competency != null)
+            {
+                competency.CurrentLevel = currentLevel;
+                competency.DesiredLevel = desiredLevel;
+            }
+            else
+            {
+                dbContext.Competencies.Add(new CompetencyEntity
+                {
+                    EmployeeId = employeeId,
+                    DirectionId = directionId,
+                    SectionId = sectionId,
+                    SubsectionId = subsectionId,
+                    TopicId = topicId,
+                    CurrentLevel = currentLevel,
+                    DesiredLevel = desiredLevel
+                });
+            }
+        }
 
 
         private static async Task<int> FindEmployeeIdByName(string employeeName, string unitName, ApplicationDbContext dbContext)
@@ -143,96 +175,105 @@ namespace ExcelEaterConsoleEdition.Services
             return newUnit.UnitId;
         }
 
-        private static async Task<int> FindDirectionIdByName(string directionName, ApplicationDbContext dbContext)
+        private static async Task<int> FindDirectionIdByName(string directionName, ApplicationDbContext dbContext, Dictionary<string, DirectionEntity> directions)
         {
-            // Поиск существующей записи сотрудника по имени
-            var existingDirection = await dbContext.Directions
-                                                  .FirstOrDefaultAsync(e => e.Name == directionName);
-
-            if (existingDirection != null)
+            if (directions.ContainsKey(directionName))
             {
-                return existingDirection.DirectionId;
+                return directions[directionName].DirectionId;
             }
 
-            var newDirection = new DirectionEntity
+            var foundDirection = await dbContext.Directions.FirstOrDefaultAsync(d => d.Name == directionName);
+
+            if (foundDirection != null)
             {
-                Name = directionName
-            };
+                directions.Add(foundDirection.Name, foundDirection);
+                return foundDirection.DirectionId;
+            }
+            else
+            {
+                var newDirection = new DirectionEntity { Name = directionName };
+                dbContext.Directions.Add(newDirection);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.Directions.Add(newDirection);
-
-            await dbContext.SaveChangesAsync();
-
-            return newDirection.DirectionId;
+                directions.Add(newDirection.Name, newDirection);
+                return newDirection.DirectionId;
+            }
         }
 
-        private static async Task<int> FindSectionIdByName(string sectionName, ApplicationDbContext dbContext)
+        private static async Task<int> FindSectionIdByName(string sectionName, ApplicationDbContext dbContext, Dictionary<string, SectionEntity> sections)
         {
-            // Поиск существующей записи сотрудника по имени
-            var existingSection = await dbContext.Sections
-                                                  .FirstOrDefaultAsync(e => e.Name == sectionName);
-
-            if (existingSection != null)
+            if (sections.ContainsKey(sectionName))
             {
-                return existingSection.SectionId;
+                return sections[sectionName].SectionId;
             }
 
-            var newSection = new SectionEntity
+            var foundSection = await dbContext.Sections.FirstOrDefaultAsync(s => s.Name == sectionName);
+
+            if (foundSection != null)
             {
-                Name = sectionName
-            };
+                sections.Add(foundSection.Name, foundSection);
+                return foundSection.SectionId;
+            }
+            else
+            {
+                var newSection = new SectionEntity { Name = sectionName };
+                dbContext.Sections.Add(newSection);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.Sections.Add(newSection);
-
-            await dbContext.SaveChangesAsync();
-
-            return newSection.SectionId;
+                sections.Add(newSection.Name, newSection);
+                return newSection.SectionId;
+            }
         }
 
-        private static async Task<int> FindSubsectionIdByName(string subsectionName, ApplicationDbContext dbContext)
+        private static async Task<int> FindSubsectionIdByName(string subsectionName, ApplicationDbContext dbContext, Dictionary<string, SubsectionEntity> subsections)
         {
-            // Поиск существующей записи сотрудника по имени
-            var existingSubsection = await dbContext.Subsections
-                                                  .FirstOrDefaultAsync(e => e.Name == subsectionName);
-
-            if (existingSubsection != null)
+            if (subsections.ContainsKey(subsectionName))
             {
-                return existingSubsection.SubsectionId;
+                return subsections[subsectionName].SubsectionId;
             }
 
-            var newSubsection = new SubsectionEntity
+            var foundSubsection = await dbContext.Subsections.FirstOrDefaultAsync(ss => ss.Name == subsectionName);
+
+            if (foundSubsection != null)
             {
-                Name = subsectionName
-            };
+                subsections.Add(foundSubsection.Name, foundSubsection);
+                return foundSubsection.SubsectionId;
+            }
+            else
+            {
+                var newSubsection = new SubsectionEntity { Name = subsectionName };
+                dbContext.Subsections.Add(newSubsection);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.Subsections.Add(newSubsection);
-
-            await dbContext.SaveChangesAsync();
-
-            return newSubsection.SubsectionId;
+                subsections.Add(newSubsection.Name, newSubsection);
+                return newSubsection.SubsectionId;
+            }
         }
 
-        private static async Task<int> FindTopicIdByName(string topicName, ApplicationDbContext dbContext)
+        private static async Task<int> FindTopicIdByName(string topicName, ApplicationDbContext dbContext, Dictionary<string, TopicEntity> topics)
         {
-            // Поиск существующей записи сотрудника по имени
-            var existingTopic = await dbContext.Topics
-                                                  .FirstOrDefaultAsync(e => e.Name == topicName);
-
-            if (existingTopic != null)
+            if (topics.ContainsKey(topicName))
             {
-                return existingTopic.TopicId;
+                return topics[topicName].TopicId;
             }
 
-            var newTopic = new TopicEntity
+            var foundTopic = await dbContext.Topics.FirstOrDefaultAsync(t => t.Name == topicName);
+
+            if (foundTopic != null)
             {
-                Name = topicName
-            };
+                topics.Add(foundTopic.Name, foundTopic);
+                return foundTopic.TopicId;
+            }
+            else
+            {
+                var newTopic = new TopicEntity { Name = topicName };
+                dbContext.Topics.Add(newTopic);
+                await dbContext.SaveChangesAsync();
 
-            dbContext.Topics.Add(newTopic);
-
-            await dbContext.SaveChangesAsync();
-
-            return newTopic.TopicId;
+                topics.Add(newTopic.Name, newTopic);
+                return newTopic.TopicId;
+            }
         }
+
     }
 }

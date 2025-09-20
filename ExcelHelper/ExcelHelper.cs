@@ -1,12 +1,13 @@
-﻿using OfficeOpenXml;
+﻿using ExcelEaterConsoleEdition.Utilities;
+using OfficeOpenXml;
+using OfficeOpenXml.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using OfficeOpenXml.Utils;
 using System.Threading.Tasks;
-using ExcelEaterConsoleEdition.Utilities;
 
 namespace ExcelEaterConsoleEdition.Parser
 {
@@ -57,14 +58,24 @@ namespace ExcelEaterConsoleEdition.Parser
 
         public static List<List<object>> ImportSingleSheetToList(string filePath, int sheetIndex)
         {
+            
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
+
+            
+
             using var package = new ExcelPackage(new FileInfo(filePath));
             package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации листов с 0 на 1. Убрать если полетят баги))
+
+            
 
             if (package.File.Exists == false)
                 throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
 
             var worksheet = package.Workbook.Worksheets[sheetIndex];
+            //замер производительности
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            Logger.Info($"Начало обработки страницы = {worksheet.Name}");
 
             // Предполагаем, что первые строки являются заголовками
             var headers = new Dictionary<int, string>();
@@ -105,6 +116,9 @@ namespace ExcelEaterConsoleEdition.Parser
                 }
             }
 
+            Logger.Info($"Конец обработки страницы = {worksheet.Name}");
+            TimeSpan elapsedTime = stopwatch.Elapsed;
+            Logger.Performance($"Время выполнения: {elapsedTime.TotalMilliseconds} мс");
             return dataRows;
         }
 
