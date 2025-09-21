@@ -3,8 +3,8 @@ using ExcelEaterConsoleEdition.Entities;
 using ExcelEaterConsoleEdition.Parser;
 using ExcelEaterConsoleEdition.Utilities;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Diagnostics;
-using static System.Collections.Specialized.BitVector32;
 
 
 namespace ExcelEaterConsoleEdition.Services
@@ -14,30 +14,30 @@ namespace ExcelEaterConsoleEdition.Services
 
         public static async Task ImportCompetenciesFromExcelToDb(ApplicationDbContext dbContext, string filePath)
         {
-            Dictionary<string, EmployeeEntity> employees = new(); // Сотрудники
-            Dictionary<string, DirectionEntity> directions = new(); // Направления
-            Dictionary<string, SectionEntity> sections = new(); // Секции
-            Dictionary<string, SubsectionEntity> subsections = new(); // Подразделы
-            Dictionary<string, TopicEntity> topics = new(); // Темы
+            Dictionary<string, EmployeeEntity> employees = new();
+            Dictionary<string, DirectionEntity> directions = new();
+            Dictionary<string, SectionEntity> sections = new();
+            Dictionary<string, SubsectionEntity> subsections = new();
+            Dictionary<string, TopicEntity> topics = new();
 
-            // Сначала проверяем базу данных на наличие записей
-            bool hasEmployees = await dbContext.Employees.AnyAsync();
-            bool hasDirections = await dbContext.Directions.AnyAsync();
-            bool hasSections = await dbContext.Sections.AnyAsync();
-            bool hasSubsections = await dbContext.Subsections.AnyAsync();
-            bool hasTopics = await dbContext.Topics.AnyAsync();
+            var programStopwatch = new Stopwatch();
+            programStopwatch.Start();
 
             // Заполняем словари только если соответствующие таблицы содержат данные
-            if (hasEmployees)
+            if (await dbContext.Employees.AnyAsync())
                 employees = await dbContext.Employees.ToDictionaryAsync(e => e.Name);
-            if (hasDirections)
+            if (await dbContext.Directions.AnyAsync())
                 directions = await dbContext.Directions.ToDictionaryAsync(d => d.Name);
-            if (hasSections)
+            if (await dbContext.Sections.AnyAsync())
                 sections = await dbContext.Sections.ToDictionaryAsync(s => s.Name);
-            if (hasSubsections)
+            if (await dbContext.Subsections.AnyAsync())
                 subsections = await dbContext.Subsections.ToDictionaryAsync(ss => ss.Name);
-            if (hasTopics)
+            if (await dbContext.Topics.AnyAsync())
                 topics = await dbContext.Topics.ToDictionaryAsync(t => t.Name);
+
+            programStopwatch.Stop();
+            TimeSpan programElapsedTime = programStopwatch.Elapsed;
+            Logger.Performance($"Время внесения данных в словари: {programElapsedTime.TotalMilliseconds} мс");
 
             var existingEmployeeId = await FindEmployeeIdByName(
                 ExcelHelper.ReadCellValue(filePath, LaunchParameters.LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.LaunchParameters.FULL_NAME_POSITION),
@@ -80,14 +80,15 @@ namespace ExcelEaterConsoleEdition.Services
                     catch (DbUpdateException ex)
                     {
                         Console.WriteLine("Ошибка при сохранении изменений: ");
-                        Console.WriteLine(ex.InnerException.Message); // Сообщение внутренней ошибки
-                        Console.WriteLine(ex.StackTrace); // Трассировка стека
+                        Console.WriteLine(ex.InnerException.Message); 
+                        Console.WriteLine(ex.StackTrace); 
                         throw;
                     }
                 }
                 await dbContext.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
+            
         }
 
         private static void UpdateOrCreateCompetency(
@@ -124,13 +125,11 @@ namespace ExcelEaterConsoleEdition.Services
 
         private static async Task<int> FindEmployeeIdByName(string employeeName, string unitName, ApplicationDbContext dbContext)
         {
-            // Поиск существующей записи сотрудника по имени
             var existingEmployee = await dbContext.Employees
                                                   .FirstOrDefaultAsync(e => e.Name == employeeName);
 
             if (existingEmployee != null)
             {
-                // Сотрудник существует, возвращаем его EmployeeId
                 return existingEmployee.EmployeeId;
             }
 
@@ -142,13 +141,10 @@ namespace ExcelEaterConsoleEdition.Services
                 UnitId = await FindUnitIdByName(unitName, dbContext),
             };
 
-            // Добавляем нового сотрудника в контекст
             dbContext.Employees.Add(newEmployee);
 
-            // Сохраняем изменения в базе данных
             await dbContext.SaveChangesAsync();
 
-            // Возвращаем вновь созданный EmployeeId
             return newEmployee.EmployeeId;
         }
 

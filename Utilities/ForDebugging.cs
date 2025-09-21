@@ -10,19 +10,19 @@ namespace ExcelEaterConsoleEdition.Utilities
     {
         public static void PrintDataRows(List<List<object>> dataRows)
         {
-            for (int i = 0; i < dataRows.Count; i++)  // Проходим по внешним спискам
+            for (int i = 0; i < dataRows.Count; i++)
             {
-                Console.Write("Строка {0}: ", i + 2);  // Индексация начинается с 2, т.к. в самом файле в 1 строке заголовки
+                Console.Write("Строка {0}: ", i + 2);
 
-                foreach (var item in dataRows[i])      // Проходим по внутренним спискам
+                foreach (var item in dataRows[i]) 
                 {
                     if (item != null)
-                        Console.Write(item.ToString() + "\t");  // Используем табуляцию для выравнивания
+                        Console.Write(item.ToString() + "\t");
                     else
                         Console.Write("NULL\t");
                 }
 
-                Console.WriteLine();                    // Переход на следующую строку
+                Console.WriteLine();
             }
         }
     }

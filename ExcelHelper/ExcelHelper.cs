@@ -1,13 +1,7 @@
 ﻿using ExcelEaterConsoleEdition.Utilities;
 using OfficeOpenXml;
-using OfficeOpenXml.Utils;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace ExcelEaterConsoleEdition.Parser
 {
@@ -45,7 +39,6 @@ namespace ExcelEaterConsoleEdition.Parser
 
             var worksheet = package.Workbook.Worksheets[sheetIndex];
 
-            // Проверяем наличие строки и столбца перед чтением
             if (worksheet.Dimension.End.Row >= rowNumber && worksheet.Dimension.End.Column >= columnNumber)
             {
                 return worksheet.Cells[rowNumber, columnNumber].Text;
@@ -72,29 +65,19 @@ namespace ExcelEaterConsoleEdition.Parser
                 throw new FileNotFoundException("Файл по пути: " + filePath + " не найден.");
 
             var worksheet = package.Workbook.Worksheets[sheetIndex];
-            //замер производительности
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            Logger.Info($"Начало обработки страницы = {worksheet.Name}");
 
-            // Предполагаем, что первые строки являются заголовками
             var headers = new Dictionary<int, string>();
             for (var col = 1; col <= worksheet.Dimension.End.Column; col++)
                 headers.Add(col, worksheet.Cells[1, col].Text);
 
-            //Console.WriteLine("FileName = " + package.File.FullName);
-            //Console.WriteLine("SheetName = " + worksheet.Name);
-            //Console.WriteLine("Index = " + worksheet.Index);
-            //Console.WriteLine("MaxRow = " + worksheet.Dimension.End.Row);
-            //Console.WriteLine("MaxColumns = " + worksheet.Dimension.End.Column);
-
-            // Создаем временную коллекцию данных
             var dataRows = new List<List<object>>();
 
 
             int parsedRows = 0;
 
-            // Пропускаем первую строку-заголовок
             for (var row = 2; row <= worksheet.Dimension.End.Row; row++)
             {
                 var rowValues = new List<object>();
@@ -103,12 +86,10 @@ namespace ExcelEaterConsoleEdition.Parser
                 {
                     object cellValue = worksheet.Cells[row, columnNumber].Value;
 
-                    // Проверяем наличие значения ячейки
                     if (cellValue != null && !string.IsNullOrWhiteSpace(cellValue.ToString()))
-                        rowValues.Add(cellValue);   // Добавляем только непустые ячейки
+                        rowValues.Add(cellValue);   
                 }
 
-                // Записываем строку, если в ней есть хотя бы одна ячейка с данными
                 if (rowValues.Count > 0)
                 {
                     dataRows.Add(rowValues);
@@ -116,9 +97,8 @@ namespace ExcelEaterConsoleEdition.Parser
                 }
             }
 
-            Logger.Info($"Конец обработки страницы = {worksheet.Name}");
             TimeSpan elapsedTime = stopwatch.Elapsed;
-            Logger.Performance($"Время выполнения: {elapsedTime.TotalMilliseconds} мс");
+            Logger.Performance($"Время обработки страницы {worksheet.Name} : {elapsedTime.TotalMilliseconds} мс");
             return dataRows;
         }
 

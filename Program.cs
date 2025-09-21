@@ -1,11 +1,7 @@
 ﻿using ExcelEaterConsoleEdition.Database;
 using ExcelEaterConsoleEdition.LaunchParameters;
-using ExcelEaterConsoleEdition.Parser;
 using ExcelEaterConsoleEdition.Services;
 using ExcelEaterConsoleEdition.Utilities;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using System;
 using System.Diagnostics;
 
 
@@ -37,48 +33,39 @@ class Program
         //замер производительности
         var stopwatch = new Stopwatch();
 
-
+        var filesCount = 0;
 
         try
         {
+            
             foreach (var file in Directory.GetFiles(directoryPath))
             {
+                
                 stopwatch.Reset();
                 stopwatch.Start();
-                Logger.Info($"Начало обработки файла = {file}");
-                //var parsedExcel = ExcelHelper.ImportExcelToList(file);
+                filesCount++;
+
                 await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, file);
                 stopwatch.Stop();
-                Logger.Info($"Конец обработки файла = {file}");
-                TimeSpan elapsedTime = stopwatch.Elapsed;
-                Logger.Performance($"Время выполнения: {elapsedTime.TotalMilliseconds} мс");
-            }
 
-            Console.WriteLine("Обработка завершена.");
+                TimeSpan elapsedTime = stopwatch.Elapsed;
+                Logger.Performance($"Время обработки {filesCount} файла {file} : {elapsedTime.TotalMilliseconds} мс");
+                Logger.Info($"Файлов обработано: {filesCount}");
+
+            }
+            
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Возникла ошибка: {ex.Message}");
         }
-
+        Logger.Info($"Файлов обработано: {filesCount}");
         programStopwatch.Stop();
+        TimeSpan programElapsedTime = programStopwatch.Elapsed;
+        Logger.Performance($"Среднее время обработки одного файла: {programElapsedTime.TotalMilliseconds/filesCount} мс");
         Logger.Info("Завершение работы программы.");
         
-        TimeSpan programElapsedTime = programStopwatch.Elapsed;
+        
         Logger.Performance($"Время выполнения программы: {programElapsedTime.TotalMilliseconds} мс");
-        //await CompetencyService.ImportCompetenciesFromExcelToDb(dbContext, parsedExcel);
-
-        //var cellValue = ExcelHelper.ReadCellValue(LaunchParameters.FILE_PATH, LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.FULL_NAME_POSITION);
-        //Console.WriteLine("ФИО:" + cellValue);
-
-        //cellValue = ExcelHelper.ReadCellValue(LaunchParameters.FILE_PATH, LaunchParameters.LEGEND_SHEET_POSITION, LaunchParameters.UNIT_POSITION);
-        //Console.WriteLine("Подразделение:" + cellValue);
-
-        //foreach (var sheetNumber in LaunchParameters.SheetNumbersToParse)
-        //{
-        //    var parsedSheet = ExcelHelper.ImportSheetToList(LaunchParameters.FILE_PATH, sheetNumber);
-        //    ForDebugging.PrintDataRows(parsedSheet);
-        //}
-
     }
 }
