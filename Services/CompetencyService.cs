@@ -94,11 +94,11 @@ namespace ExcelEaterConsoleEdition.Services
         private static void UpdateOrCreateCompetency(
             CompetencyEntity competency,
             ApplicationDbContext dbContext,
-            int employeeId,
-            int directionId,
-            int sectionId,
-            int subsectionId,
-            int topicId,
+            Guid employeeId,
+            Guid directionId,
+            Guid sectionId,
+            Guid subsectionId,
+            Guid topicId,
             int currentLevel,
             int desiredLevel)
         {
@@ -123,7 +123,7 @@ namespace ExcelEaterConsoleEdition.Services
         }
 
 
-        private static async Task<int> FindEmployeeIdByName(string employeeName, string unitName, ApplicationDbContext dbContext)
+        private static async Task<Guid> FindEmployeeIdByName(string employeeName, string unitName, ApplicationDbContext dbContext)
         {
             var existingEmployee = await dbContext.Employees
                                                   .FirstOrDefaultAsync(e => e.Name == employeeName);
@@ -148,7 +148,7 @@ namespace ExcelEaterConsoleEdition.Services
             return newEmployee.EmployeeId;
         }
 
-        private static async Task<int> FindUnitIdByName(string unitName, ApplicationDbContext dbContext)
+        private static async Task<Guid> FindUnitIdByName(string unitName, ApplicationDbContext dbContext)
         {
             // Поиск существующей записи сотрудника по имени
             var existingEmployee = await dbContext.Units
@@ -171,7 +171,7 @@ namespace ExcelEaterConsoleEdition.Services
             return newUnit.UnitId;
         }
 
-        private static async Task<int> FindDirectionIdByName(string directionName, ApplicationDbContext dbContext, Dictionary<string, DirectionEntity> directions)
+        private static async Task<Guid> FindDirectionIdByName(string directionName, ApplicationDbContext dbContext, Dictionary<string, DirectionEntity> directions)
         {
             if (directions.ContainsKey(directionName))
             {
@@ -196,7 +196,7 @@ namespace ExcelEaterConsoleEdition.Services
             }
         }
 
-        private static async Task<int> FindSectionIdByName(string sectionName, ApplicationDbContext dbContext, Dictionary<string, SectionEntity> sections)
+        private static async Task<Guid> FindSectionIdByName(string sectionName, ApplicationDbContext dbContext, Dictionary<string, SectionEntity> sections)
         {
             if (sections.ContainsKey(sectionName))
             {
@@ -221,7 +221,7 @@ namespace ExcelEaterConsoleEdition.Services
             }
         }
 
-        private static async Task<int> FindSubsectionIdByName(string subsectionName, ApplicationDbContext dbContext, Dictionary<string, SubsectionEntity> subsections)
+        private static async Task<Guid> FindSubsectionIdByName(string subsectionName, ApplicationDbContext dbContext, Dictionary<string, SubsectionEntity> subsections)
         {
             if (subsections.ContainsKey(subsectionName))
             {
@@ -246,7 +246,7 @@ namespace ExcelEaterConsoleEdition.Services
             }
         }
 
-        private static async Task<int> FindTopicIdByName(string topicName, ApplicationDbContext dbContext, Dictionary<string, TopicEntity> topics)
+        private static async Task<Guid> FindTopicIdByName(string topicName, ApplicationDbContext dbContext, Dictionary<string, TopicEntity> topics)
         {
             if (topics.ContainsKey(topicName))
             {

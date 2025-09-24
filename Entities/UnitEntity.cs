@@ -8,7 +8,7 @@ namespace ExcelEaterConsoleEdition.Entities
 {
     public class UnitEntity
     {
-        public int UnitId { get; set; }
+        public Guid UnitId { get; set; }
         public string Name { get; set; }
 
         public virtual ICollection<EmployeeEntity> Employees { get; set; }

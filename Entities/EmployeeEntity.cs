@@ -8,8 +8,8 @@ namespace ExcelEaterConsoleEdition.Entities
 {
     public class EmployeeEntity
     {
-        public int EmployeeId { get; set; }
-        public int UnitId { get; set; }
+        public Guid EmployeeId { get; set; }
+        public Guid UnitId { get; set; }
         public string EmployeeIdInVbpm { get; set; } = "";//пока пусть это будет email
         public string Name { get; set; } = "";
 

@@ -106,6 +106,7 @@ namespace ExcelEaterConsoleEdition.Parser
         {
             ExcelPackage.License.SetNonCommercialOrganization("ABOBA");
             var package = new ExcelPackage(new FileInfo(filePath));
+            package.Compatibility.IsWorksheets1Based = true; //меняем начало индексации с 0 на 1. Убрать если полетят баги))
             return package.Workbook.Worksheets[sheetIndex].Name;
         }
     }

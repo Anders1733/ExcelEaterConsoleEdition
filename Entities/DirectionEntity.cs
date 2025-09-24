@@ -8,7 +8,7 @@ namespace ExcelEaterConsoleEdition.Entities
 {
     public class DirectionEntity
     {
-        public int DirectionId { get; set; }
+        public Guid DirectionId { get; set; }
         public string Name { get; set; }
 
         public virtual ICollection<CompetencyEntity> Competencies { get; set; }

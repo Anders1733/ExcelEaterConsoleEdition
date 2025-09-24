@@ -8,7 +8,7 @@ namespace ExcelEaterConsoleEdition.Entities
 {
     public class TopicEntity
     {
-        public int TopicId { get; set; }
+        public Guid TopicId { get; set; }
         public string Name { get; set; }
 
         public virtual ICollection<CompetencyEntity> Competencies { get; set; }
